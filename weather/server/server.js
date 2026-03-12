@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 // 中间件
 app.use(cors());
 app.use(express.json());
-app.use(express.static('../public'));
+app.use(express.static('public'));
 
 // OpenWeatherMap API配置
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY || 'YOUR_API_KEY';
