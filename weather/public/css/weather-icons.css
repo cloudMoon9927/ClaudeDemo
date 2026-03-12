@@ -1,0 +1,130 @@
+/* 天气图标样式 - 基于Font Awesome的天气图标扩展 */
+
+.weather-icon {
+    display: inline-block;
+    font-size: 1.5rem;
+    margin-right: 8px;
+}
+
+/* 晴天 */
+.weather-clear-day {
+    color: #ffd93d;
+}
+
+/* 夜晚晴天 */
+.weather-clear-night {
+    color: #f39c12;
+}
+
+/* 多云 */
+.weather-clouds {
+    color: #95a5a6;
+}
+
+/* 雨天 */
+.weather-rain {
+    color: #3498db;
+}
+
+/* 雪天 */
+.weather-snow {
+    color: #ecf0f1;
+}
+
+/* 雷暴 */
+.weather-thunderstorm {
+    color: #9b59b6;
+}
+
+/* 雾天 */
+.weather-mist,
+.weather-fog {
+    color: #95a5a6;
+}
+
+/* 沙尘暴 */
+.weather-dust,
+.weather-sand {
+    color: #f39c12;
+}
+
+/* 龙卷风 */
+.weather-tornado {
+    color: #8e44ad;
+}
+
+/* 飓风 */
+.weather-hurricane {
+    color: #e74c3c;
+}
+
+/* 天气图标动画 */
+@keyframes weatherPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.weather-icon-animated {
+    animation: weatherPulse 2s infinite;
+}
+
+/* 雨滴动画 */
+@keyframes rainDrop {
+    0% { transform: translateY(-10px); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateY(20px); opacity: 0; }
+}
+
+.rain-animation {
+    position: relative;
+    overflow: hidden;
+}
+
+.rain-animation::before {
+    content: '💧';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    animation: rainDrop 1s infinite;
+}
+
+/* 雪片动画 */
+@keyframes snowFall {
+    0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateY(30px) rotate(360deg); opacity: 0; }
+}
+
+.snow-animation {
+    position: relative;
+    overflow: hidden;
+}
+
+.snow-animation::before {
+    content: '❄️';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    animation: snowFall 2s infinite;
+}
+
+/* 太阳动画 */
+@keyframes sunRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.sun-animation {
+    animation: sunRotate 10s linear infinite;
+}
+
+/* 云层动画 */
+@keyframes cloudFloat {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(10px); }
+}
+
+.cloud-animation {
+    animation: cloudFloat 3s ease-in-out infinite;
+}
