@@ -1,0 +1,297 @@
+/* 天气预警样式 */
+
+/* 预警级别颜色 */
+.alert-level-high {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    border-left: 4px solid #c0392b;
+}
+
+.alert-level-medium {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    border-left: 4px solid #e67e22;
+}
+
+.alert-level-low {
+    background: linear-gradient(135deg, #27ae60, #229954);
+    border-left: 4px solid #229954;
+}
+
+/* 预警图标动画 */
+.alert-icon {
+    animation: alert-blink 2s infinite;
+}
+
+@keyframes alert-blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.5; }
+}
+
+/* 预警横幅 */
+.weather-alert-banner {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    z-index: 1000;
+    max-width: 300px;
+    background: rgba(231, 76, 60, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 15px;
+    color: white;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    animation: slideInRight 0.5s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.weather-alert-banner .alert-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.weather-alert-banner .alert-icon {
+    font-size: 1.5rem;
+    margin-right: 10px;
+}
+
+.weather-alert-banner .alert-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.weather-alert-banner .alert-message {
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.weather-alert-banner .alert-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.weather-alert-banner .alert-close:hover {
+    opacity: 1;
+}
+
+/* 预警级别指示器 */
+.alert-indicator {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.alert-indicator.high {
+    background: #e74c3c;
+    color: white;
+}
+
+.alert-indicator.medium {
+    background: #f39c12;
+    color: white;
+}
+
+.alert-indicator.low {
+    background: #27ae60;
+    color: white;
+}
+
+/* 预报卡片预警样式增强 */
+.forecast-card.forecast-alert-high {
+    border: 2px solid #e74c3c;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.3);
+}
+
+.forecast-card.forecast-alert-medium {
+    border: 2px solid #f39c12;
+    box-shadow: 0 0 15px rgba(243, 156, 18, 0.3);
+}
+
+.forecast-card.forecast-alert-high:hover {
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
+}
+
+.forecast-card.forecast-alert-medium:hover {
+    box-shadow: 0 0 20px rgba(243, 156, 18, 0.5);
+}
+
+/* 预警徽章 */
+.forecast-alert-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #e74c3c;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    animation: pulse 2s infinite;
+}
+
+.forecast-alert-badge.medium {
+    background: #f39c12;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* 预警详情面板 */
+.alert-detail-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 15px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    z-index: 2000;
+    display: none;
+}
+
+.alert-detail-panel.show {
+    display: block;
+    animation: fadeInScale 0.3s ease;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+body.dark-theme .alert-detail-panel {
+    background: rgba(45, 52, 54, 0.95);
+    color: #ddd;
+}
+
+.alert-detail-panel .alert-detail-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.alert-detail-panel .alert-detail-icon {
+    font-size: 2rem;
+    margin-right: 15px;
+    color: #e74c3c;
+}
+
+.alert-detail-panel .alert-detail-title {
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
+.alert-detail-panel .alert-detail-content {
+    margin-bottom: 20px;
+}
+
+.alert-detail-panel .alert-detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.alert-detail-panel .alert-detail-label {
+    font-weight: 500;
+}
+
+.alert-detail-panel .alert-detail-value {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.alert-detail-panel .alert-detail-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.alert-detail-panel .alert-detail-close:hover {
+    color: #333;
+}
+
+/* 遮罩层 */
+.alert-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1999;
+    display: none;
+}
+
+.alert-overlay.show {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .weather-alert-banner {
+        top: auto;
+        bottom: 20px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+
+    .alert-detail-panel {
+        width: 95%;
+        padding: 20px;
+    }
+
+    .alert-detail-panel .alert-detail-title {
+        font-size: 1.1rem;
+    }
+}

@@ -1,5 +1,6 @@
 // 主应用文件 - 天气应用的核心逻辑
 
+// 导入天气指数计算模块
 class WeatherApp {
     constructor() {
         this.currentCity = null;
@@ -7,6 +8,8 @@ class WeatherApp {
         this.currentTheme = localStorage.getItem('theme') || 'light';
         this.apiBaseUrl = '/api/weather';
         this.useDemoData = false; // 是否使用演示数据
+        this.weatherIndices = new WeatherIndices(); // 天气指数计算实例
+        this.charts = new WeatherCharts(); // 图表实例
 
         this.init();
     }
@@ -221,9 +224,22 @@ class WeatherApp {
         const airQuality = this.estimateAirQuality(weatherData.main.humidity);
         document.getElementById('airQuality').textContent = airQuality;
 
+        // 显示天气预警
+        this.displayWeatherAlert(weatherData);
+
+        // 显示生活指数
+        this.displayWeatherIndices(weatherData);
+
         // 更新时间
         const updateTime = new Date().toLocaleString('zh-CN');
-        document.getElementById('updateTime').textContent = `更新时间: ${updateTime}`;
+        const updateElement = document.getElementById('updateTime');
+        updateElement.textContent = `更新时间: ${updateTime}`;
+
+        // 添加更新动画
+        updateElement.classList.add('data-updating');
+        setTimeout(() => {
+            updateElement.classList.remove('data-updating');
+        }, 1000);
     }
 
     updateWeatherIcon(weatherMain, iconCode) {
@@ -267,6 +283,67 @@ class WeatherApp {
         if (humidity < 60) return '良';
         if (humidity < 80) return '轻度污染';
         return '中度污染';
+    }
+
+    displayWeatherIndices(weatherData) {
+        try {
+            const indices = this.weatherIndices.getAllIndices(weatherData);
+            this.weatherIndices.displayIndicesPanel(indices, 'weatherIndices');
+        } catch (error) {
+            console.error('显示天气指数失败:', error);
+            document.getElementById('weatherIndices').innerHTML = '<p class="text-muted">指数计算暂时不可用</p>';
+        }
+    }
+
+    displayWeatherAlert(weatherData) {
+        try {
+            const alert = this.calculateWeatherAlert(weatherData);
+
+            // 移除现有的预警横幅
+            const existingAlert = document.querySelector('.weather-alert-banner');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
+            // 如果预警级别不是低，则显示预警横幅
+            if (alert.level !== 'low') {
+                this.showWeatherAlertBanner(alert);
+            }
+        } catch (error) {
+            console.error('显示天气预警失败:', error);
+        }
+    }
+
+    showWeatherAlertBanner(alert) {
+        // 创建预警横幅
+        const alertBanner = document.createElement('div');
+        alertBanner.className = 'weather-alert-banner';
+        alertBanner.innerHTML = `
+            <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+            <div class="alert-header">
+                <div class="alert-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="alert-title">天气预警</div>
+            </div>
+            <div class="alert-message">${alert.message}</div>
+        `;
+
+        // 添加到页面
+        document.body.appendChild(alertBanner);
+
+        // 5秒后自动隐藏
+        setTimeout(() => {
+            if (alertBanner.parentElement) {
+                alertBanner.style.opacity = '0';
+                alertBanner.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (alertBanner.parentElement) {
+                        alertBanner.remove();
+                    }
+                }, 500);
+            }
+        }, 5000);
     }
 
     async loadForecast(city) {
@@ -346,10 +423,22 @@ class WeatherApp {
         const dayItem = dayForecast.items[0]; // 白天的预报
         const tempMax = Math.round(dayItem.main.temp_max);
         const tempMin = Math.round(dayItem.main.temp_min);
+        const humidity = dayItem.main.humidity;
+        const windSpeed = dayItem.wind.speed;
+        const pressure = dayItem.main.pressure;
+        const visibility = dayItem.visibility ? Math.round(dayItem.visibility / 1000) : '10';
+
+        // 计算天气预警级别
+        const alertLevel = this.calculateWeatherAlert(dayItem);
+        const alertClass = alertLevel.level === 'high' ? 'forecast-alert-high' :
+                          alertLevel.level === 'medium' ? 'forecast-alert-medium' : '';
 
         card.innerHTML = `
-            <div class="forecast-card">
-                <div class="forecast-date">${dateStr}</div>
+            <div class="forecast-card ${alertClass}" data-bs-toggle="tooltip" data-bs-placement="top" title="${alertLevel.message}">
+                <div class="forecast-header">
+                    <div class="forecast-date">${dateStr}</div>
+                    ${alertLevel.level !== 'low' ? `<div class="forecast-alert-badge"><i class="fas fa-exclamation-triangle"></i></div>` : ''}
+                </div>
                 <div class="forecast-icon">
                     <i class="fas ${this.getWeatherIconClass(dayItem.weather[0].main)}"></i>
                 </div>
@@ -358,8 +447,30 @@ class WeatherApp {
                     <span class="temp-max">${tempMax}°</span>
                     <span class="temp-min">${tempMin}°</span>
                 </div>
+                <div class="forecast-details">
+                    <div class="forecast-detail-item">
+                        <i class="fas fa-tint"></i>
+                        <span>${humidity}%</span>
+                    </div>
+                    <div class="forecast-detail-item">
+                        <i class="fas fa-wind"></i>
+                        <span>${windSpeed} m/s</span>
+                    </div>
+                    <div class="forecast-detail-item">
+                        <i class="fas fa-eye"></i>
+                        <span>${visibility}km</span>
+                    </div>
+                    <div class="forecast-detail-item">
+                        <i class="fas fa-compress-alt"></i>
+                        <span>${pressure}hPa</span>
+                    </div>
+                </div>
                 <div class="forecast-rain">
+                    <i class="fas fa-cloud-rain"></i>
                     <small>降水: ${Math.round(dayItem.pop * 100)}%</small>
+                </div>
+                <div class="forecast-uv-index">
+                    <small>紫外线: ${this.estimateUVIndex(dayItem.weather[0].main)}</small>
                 </div>
             </div>
         `;
@@ -378,6 +489,81 @@ class WeatherApp {
             case 'mist':
             case 'fog': return 'fa-smog weather-mist';
             default: return 'fa-cloud-sun';
+        }
+    }
+
+    calculateWeatherAlert(weatherData) {
+        const temp = weatherData.main.temp;
+        const windSpeed = weatherData.wind.speed;
+        const pop = weatherData.pop;
+        const weatherMain = weatherData.weather[0].main.toLowerCase();
+
+        // 高温预警
+        if (temp > 35) {
+            return {
+                level: 'high',
+                message: '高温预警：气温过高，请注意防暑降温'
+            };
+        }
+
+        // 低温预警
+        if (temp < -10) {
+            return {
+                level: 'high',
+                message: '低温预警：气温过低，请注意保暖'
+            };
+        }
+
+        // 大风预警
+        if (windSpeed > 10) {
+            return {
+                level: 'medium',
+                message: '大风预警：风力较强，请注意安全'
+            };
+        }
+
+        // 暴雨预警
+        if (weatherMain === 'rain' && pop > 0.8) {
+            return {
+                level: 'medium',
+                message: '暴雨预警：降雨概率大，请携带雨具'
+            };
+        }
+
+        // 雷电预警
+        if (weatherMain === 'thunderstorm') {
+            return {
+                level: 'high',
+                message: '雷电预警：可能有雷电活动，请注意安全'
+            };
+        }
+
+        // 暴雪预警
+        if (weatherMain === 'snow' && pop > 0.6) {
+            return {
+                level: 'medium',
+                message: '暴雪预警：可能有大雪，请注意出行安全'
+            };
+        }
+
+        return {
+            level: 'low',
+            message: '天气状况良好'
+        };
+    }
+
+    estimateUVIndex(weatherMain) {
+        // 简单的紫外线指数估算
+        switch(weatherMain.toLowerCase()) {
+            case 'clear': return '强 (8-10)';
+            case 'clouds': return '中等 (4-6)';
+            case 'rain':
+            case 'drizzle': return '弱 (1-2)';
+            case 'snow': return '中等 (5-7)';
+            case 'thunderstorm': return '弱 (0-1)';
+            case 'mist':
+            case 'fog': return '弱 (1-3)';
+            default: return '中等 (3-5)';
         }
     }
 
@@ -415,86 +601,8 @@ class WeatherApp {
     }
 
     displayHourlyForecast(hourlyData) {
-        const ctx = document.getElementById('hourlyChart').getContext('2d');
-
-        // 准备图表数据
-        const labels = hourlyData.map(item => {
-            const time = new Date(item.dt * 1000);
-            return time.getHours() + ':00';
-        });
-
-        const temperatures = hourlyData.map(item => Math.round(item.main.temp));
-        const precipitation = hourlyData.map(item => Math.round(item.pop * 100));
-
-        // 创建图表
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '温度 (°C)',
-                    data: temperatures,
-                    borderColor: '#ff7675',
-                    backgroundColor: 'rgba(255, 118, 117, 0.1)',
-                    yAxisID: 'y',
-                    tension: 0.4
-                }, {
-                    label: '降水概率 (%)',
-                    data: precipitation,
-                    borderColor: '#74b9ff',
-                    backgroundColor: 'rgba(116, 185, 255, 0.1)',
-                    yAxisID: 'y1',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: this.currentTheme === 'dark' ? '#ddd' : '#333'
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: {
-                            color: this.currentTheme === 'dark' ? '#ddd' : '#333'
-                        },
-                        grid: {
-                            color: this.currentTheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-                        }
-                    },
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        ticks: {
-                            color: this.currentTheme === 'dark' ? '#ddd' : '#333'
-                        },
-                        grid: {
-                            color: this.currentTheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-                        }
-                    },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        ticks: {
-                            color: this.currentTheme === 'dark' ? '#ddd' : '#333'
-                        },
-                        grid: {
-                            drawOnChartArea: false,
-                        },
-                    }
-                }
-            }
-        });
+        // 使用WeatherCharts类创建增强的图表
+        this.charts.createHourlyForecastChart('hourlyChart', hourlyData, this.currentTheme);
     }
 
     addCityToList(city) {
@@ -656,6 +764,20 @@ class WeatherApp {
         } else {
             document.body.classList.remove('dark-theme');
             document.getElementById('themeToggle').innerHTML = '<i class="fas fa-moon"></i>';
+        }
+
+        // 更新图表主题
+        this.updateChartsTheme();
+    }
+
+    updateChartsTheme() {
+        // 重新创建图表以应用新主题
+        if (this.currentCity) {
+            // 如果当前显示的是逐小时预报，重新加载
+            const activeTab = document.querySelector('.nav-link.active');
+            if (activeTab && activeTab.id === 'hourlyTab') {
+                this.loadHourlyForecast(this.currentCity);
+            }
         }
     }
 

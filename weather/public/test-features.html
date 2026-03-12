@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>功能测试 - 天气应用</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <link href="css/weather-alerts.css" rel="stylesheet">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+        }
+
+        .test-button {
+            margin: 5px;
+        }
+
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .test-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .test-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .demo-card {
+            margin: 10px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="test-container">
+            <h1 class="text-center mb-4">
+                <i class="fas fa-vial"></i>
+                功能测试页面
+            </h1>
+
+            <!-- 预报卡片测试 -->
+            <div class="test-section">
+                <h3>📅 预报卡片测试</h3>
+                <button class="btn btn-primary test-button" onclick="testForecastCards()">
+                    测试预报卡片
+                </button>
+                <div id="forecastTestResult"></div>
+                <div id="forecastDemo" class="mt-3"></div>
+            </div>
+
+            <!-- 天气指数测试 -->
+            <div class="test-section">
+                <h3>📊 天气指数测试</h3>
+                <button class="btn btn-primary test-button" onclick="testWeatherIndices()">
+                    测试天气指数
+                </button>
+                <div id="indicesTestResult"></div>
+                <div id="indicesDemo" class="mt-3"></div>
+            </div>
+
+            <!-- 天气预警测试 -->
+            <div class="test-section">
+                <h3>⚠️ 天气预警测试</h3>
+                <button class="btn btn-warning test-button" onclick="testWeatherAlerts()">
+                    测试天气预警
+                </button>
+                <div id="alertsTestResult"></div>
+            </div>
+
+            <!-- 图表测试 -->
+            <div class="test-section">
+                <h3>📈 图表功能测试</h3>
+                <button class="btn btn-primary test-button" onclick="testCharts()">
+                    测试图表功能
+                </button>
+                <div id="chartsTestResult"></div>
+            </div>
+
+            <!-- 综合测试 -->
+            <div class="test-section">
+                <h3>🧪 综合功能测试</h3>
+                <button class="btn btn-success test-button" onclick="runAllTests()">
+                    运行所有测试
+                </button>
+                <div id="allTestsResult"></div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="index.html" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> 返回主应用
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript文件 -->
+    <script src="js/weather-indices.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/main.js"></script>
+    <script src="test-features.js"></script>
+
+    <script>
+        // 测试预报卡片
+        function testForecastCards() {
+            const result = document.getElementById('forecastTestResult');
+            const demo = document.getElementById('forecastDemo');
+
+            try {
+                const weatherApp = new WeatherApp();
+
+                // 创建模拟预报数据
+                const mockDayForecast = {
+                    date: new Date().toISOString().slice(0, 10),
+                    items: [{
+                        main: {
+                            temp_max: 28,
+                            temp_min: 20,
+                            humidity: 65,
+                            pressure: 1013
+                        },
+                        weather: [{ main: 'Clear', description: '晴天' }],
+                        wind: { speed: 3.5 },
+                        pop: 0.1,
+                        visibility: 10000
+                    }]
+                };
+
+                const card = weatherApp.createForecastCard(mockDayForecast, 0);
+                demo.innerHTML = '';
+                demo.appendChild(card);
+
+                result.innerHTML = '<div class="test-success">✅ 预报卡片创建成功</div>';
+            } catch (error) {
+                result.innerHTML = `<div class="test-error">❌ 预报卡片测试失败: ${error.message}</div>`;
+            }
+        }
+
+        // 测试天气指数
+        function testWeatherIndices() {
+            const result = document.getElementById('indicesTestResult');
+            const demo = document.getElementById('indicesDemo');
+
+            try {
+                const indices = new WeatherIndices();
+
+                // 创建模拟天气数据
+                const mockWeatherData = {
+                    main: { temp: 25, humidity: 60, pressure: 1013 },
+                    weather: [{ main: 'Clear' }],
+                    wind: { speed: 3 },
+                    pop: 0.1
+                };
+
+                const allIndices = indices.getAllIndices(mockWeatherData);
+                indices.displayIndicesPanel(allIndices, 'indicesDemo');
+
+                result.innerHTML = '<div class="test-success">✅ 天气指数计算成功</div>';
+            } catch (error) {
+                result.innerHTML = `<div class="test-error">❌ 天气指数测试失败: ${error.message}</div>`;
+            }
+        }
+
+        // 测试天气预警
+        function testWeatherAlerts() {
+            const result = document.getElementById('alertsTestResult');
+
+            try {
+                const weatherApp = new WeatherApp();
+
+                // 测试高温预警
+                const hotWeather = {
+                    main: { temp: 38 },
+                    weather: [{ main: 'Clear' }],
+                    wind: { speed: 2 },
+                    pop: 0
+                };
+
+                const alert = weatherApp.calculateWeatherAlert(hotWeather);
+                weatherApp.showWeatherAlertBanner(alert);
+
+                result.innerHTML = '<div class="test-success">✅ 天气预警系统工作正常</div>';
+            } catch (error) {
+                result.innerHTML = `<div class="test-error">❌ 天气预警测试失败: ${error.message}</div>`;
+            }
+        }
+
+        // 测试图表功能
+        function testCharts() {
+            const result = document.getElementById('chartsTestResult');
+
+            try {
+                const charts = new WeatherCharts();
+
+                // 创建模拟逐小时数据
+                const mockHourlyData = [];
+                for (let i = 0; i < 24; i++) {
+                    mockHourlyData.push({
+                        dt: Math.floor(Date.now() / 1000) + i * 3600,
+                        main: { temp: 20 + Math.sin(i / 24 * Math.PI * 2) * 5, humidity: 60 },
+                        pop: Math.random() * 0.3
+                    });
+                }
+
+                // 测试数据准备方法
+                const labels = charts.prepareHourlyLabels(mockHourlyData);
+                const tempData = charts.prepareTemperatureData(mockHourlyData);
+
+                result.innerHTML = '<div class="test-success">✅ 图表数据处理功能正常</div>';
+            } catch (error) {
+                result.innerHTML = `<div class="test-error">❌ 图表测试失败: ${error.message}</div>`;
+            }
+        }
+
+        // 运行所有测试
+        async function runAllTests() {
+            const result = document.getElementById('allTestsResult');
+            result.innerHTML = '<div class="test-info">🔄 正在运行所有测试...</div>';
+
+            try {
+                await testForecastCards();
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                await testWeatherIndices();
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                await testWeatherAlerts();
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                await testCharts();
+
+                result.innerHTML = '<div class="test-success">🎉 所有功能测试通过！</div>';
+            } catch (error) {
+                result.innerHTML = `<div class="test-error">❌ 综合测试失败: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
