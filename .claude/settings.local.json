@@ -3,7 +3,11 @@
     "allow": [
       "Bash(curl -s \"http://localhost:3000/api/health\" | jq .)",
       "Bash(curl -s \"http://localhost:3000/\" | head -20)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(sleep 3 && curl -s http://localhost:3000 | head -5)",
+      "Bash(netstat -ano | findstr :3000)",
+      "Bash(taskkill //F //PID 21736)",
+      "Bash(git add:*)"
     ]
   }
 }
