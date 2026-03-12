@@ -11,6 +11,14 @@ class WeatherApp {
         this.weatherIndices = new WeatherIndices(); // 天气指数计算实例
         this.charts = new WeatherCharts(); // 图表实例
 
+        // 数据缓存系统
+        this.cache = {
+            weather: new Map(),
+            forecast: new Map(),
+            cities: new Map(),
+            maxAge: 5 * 60 * 1000 // 5分钟缓存
+        };
+
         this.init();
     }
 
@@ -29,32 +37,62 @@ class WeatherApp {
     }
 
     setupEventListeners() {
-        // 导航标签切换
+        // 导航标签切换（支持触摸）
         document.getElementById('currentWeatherTab').addEventListener('click', () => {
+            this.switchTab('current');
+        });
+        document.getElementById('currentWeatherTab').addEventListener('touchstart', (e) => {
+            e.preventDefault();
             this.switchTab('current');
         });
 
         document.getElementById('forecastTab').addEventListener('click', () => {
             this.switchTab('forecast');
         });
+        document.getElementById('forecastTab').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.switchTab('forecast');
+        });
 
         document.getElementById('hourlyTab').addEventListener('click', () => {
             this.switchTab('hourly');
         });
+        document.getElementById('hourlyTab').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.switchTab('hourly');
+        });
 
-        // 主题切换
+        // 主题切换（支持触摸）
         document.getElementById('themeToggle').addEventListener('click', () => {
             this.toggleTheme();
         });
+        document.getElementById('themeToggle').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.toggleTheme();
+        });
 
-        // 添加城市按钮
+        // 添加城市按钮（支持触摸）
         document.getElementById('addCityBtn').addEventListener('click', () => {
             this.showAddCityModal();
         });
+        document.getElementById('addCityBtn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.showAddCityModal();
+        });
 
-        // 城市搜索
-        document.getElementById('citySearch').addEventListener('input', (e) => {
+        // 城市搜索（优化移动端输入）
+        const citySearch = document.getElementById('citySearch');
+        citySearch.addEventListener('input', (e) => {
             this.searchCities(e.target.value);
+        });
+
+        // 移动端键盘优化
+        citySearch.addEventListener('focus', () => {
+            this.handleMobileInputFocus();
+        });
+
+        citySearch.addEventListener('blur', () => {
+            this.handleMobileInputBlur();
         });
 
         // 点击模态框外部关闭
@@ -63,6 +101,115 @@ class WeatherApp {
                 this.closeAddCityModal();
             }
         });
+
+        // 添加触摸手势支持
+        this.setupTouchGestures();
+    }
+
+    setupTouchGestures() {
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            this.handleSwipe(touchStartX, touchEndX);
+        }, { passive: true });
+    }
+
+    handleSwipe(startX, endX) {
+        const threshold = 50; // 滑动阈值
+        const diff = startX - endX;
+
+        if (Math.abs(diff) > threshold) {
+            const activeTab = document.querySelector('.nav-link.active');
+            if (activeTab) {
+                const tabs = ['current', 'forecast', 'hourly'];
+                const currentIndex = tabs.findIndex(tab => activeTab.id === `${tab}Tab`);
+
+                if (diff > 0 && currentIndex < tabs.length - 1) {
+                    // 向左滑动，切换到下一个标签
+                    this.switchTab(tabs[currentIndex + 1]);
+                } else if (diff < 0 && currentIndex > 0) {
+                    // 向右滑动，切换到上一个标签
+                    this.switchTab(tabs[currentIndex - 1]);
+                }
+            }
+        }
+    }
+
+    handleMobileInputFocus() {
+        // 移动端输入框获得焦点时的处理
+        if (this.isMobile()) {
+            document.body.classList.add('mobile-input-focus');
+        }
+    }
+
+    handleMobileInputBlur() {
+        // 移动端输入框失去焦点时的处理
+        document.body.classList.remove('mobile-input-focus');
+    }
+
+    isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // 缓存管理方法
+    setCache(key, data, type = 'weather') {
+        const cacheItem = {
+            data: data,
+            timestamp: Date.now(),
+            type: type
+        };
+        this.cache[type].set(key, cacheItem);
+
+        // 清理过期缓存
+        this.cleanExpiredCache();
+    }
+
+    getCache(key, type = 'weather') {
+        const cacheItem = this.cache[type].get(key);
+        if (!cacheItem) return null;
+
+        const age = Date.now() - cacheItem.timestamp;
+        if (age > this.cache.maxAge) {
+            this.cache[type].delete(key);
+            return null;
+        }
+
+        return cacheItem.data;
+    }
+
+    cleanExpiredCache() {
+        const now = Date.now();
+        for (const [type, cache] of Object.entries(this.cache)) {
+            if (type === 'maxAge') continue;
+            for (const [key, item] of cache.entries()) {
+                if (now - item.timestamp > this.cache.maxAge) {
+                    cache.delete(key);
+                }
+            }
+        }
+    }
+
+    clearCache(type = null) {
+        if (type) {
+            this.cache[type].clear();
+        } else {
+            for (const [key, cache] of Object.entries(this.cache)) {
+                if (key !== 'maxAge') {
+                    cache.clear();
+                }
+            }
+        }
+    }
+
+    // 生成缓存键
+    generateCacheKey(city, type = 'weather') {
+        return `${type}_${city.lat}_${city.lon}`;
     }
 
     switchTab(tabName) {
@@ -72,25 +219,49 @@ class WeatherApp {
         });
         document.getElementById(`${tabName}WeatherTab`).classList.add('active');
 
-        // 切换内容显示
-        document.querySelectorAll('.weather-content').forEach(content => {
-            content.style.display = 'none';
+        // 获取所有内容面板
+        const contents = document.querySelectorAll('.weather-content');
+        const targetContent = document.getElementById(`${tabName}Content`);
+
+        // 添加切换动画
+        contents.forEach(content => {
+            if (content !== targetContent) {
+                // 隐藏其他内容
+                content.style.opacity = '0';
+                content.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    content.style.display = 'none';
+                }, 300);
+            }
         });
 
+        // 显示目标内容
+        if (targetContent) {
+            targetContent.style.display = 'block';
+            setTimeout(() => {
+                targetContent.style.opacity = '1';
+                targetContent.style.transform = 'translateY(0)';
+            }, 50);
+        }
+
+        // 根据标签加载相应数据
         switch(tabName) {
-            case 'current':
-                document.getElementById('currentWeatherContent').style.display = 'block';
-                break;
             case 'forecast':
-                document.getElementById('forecastContent').style.display = 'block';
                 if (this.currentCity) {
-                    this.loadForecast(this.currentCity);
+                    // 添加加载状态
+                    this.showContentLoading('forecastContent');
+                    setTimeout(() => {
+                        this.loadForecast(this.currentCity);
+                    }, 400); // 等待动画完成
                 }
                 break;
             case 'hourly':
-                document.getElementById('hourlyContent').style.display = 'block';
                 if (this.currentCity) {
-                    this.loadHourlyForecast(this.currentCity);
+                    // 添加加载状态
+                    this.showContentLoading('hourlyContent');
+                    setTimeout(() => {
+                        this.loadHourlyForecast(this.currentCity);
+                    }, 400); // 等待动画完成
                 }
                 break;
         }
@@ -167,8 +338,22 @@ class WeatherApp {
         this.currentCity = city;
 
         try {
+            const cacheKey = this.generateCacheKey(city, 'weather');
             let weatherData;
 
+            // 首先检查缓存
+            const cachedData = this.getCache(cacheKey, 'weather');
+            if (cachedData) {
+                console.log('使用缓存的天气数据');
+                weatherData = cachedData;
+                this.displayCurrentWeather(weatherData, city);
+                this.updateActiveCity(city);
+                this.showInfo('数据来自缓存');
+                this.showLoading(false);
+                return;
+            }
+
+            // 缓存未命中，获取新数据
             if (this.useDemoData) {
                 // 使用演示数据
                 weatherData = DemoData.getCurrentWeather();
@@ -182,6 +367,9 @@ class WeatherApp {
                 weatherData = await response.json();
             }
 
+            // 缓存数据
+            this.setCache(cacheKey, weatherData, 'weather');
+
             this.displayCurrentWeather(weatherData, city);
             this.switchTab('current');
             this.updateActiveCity(city);
@@ -192,7 +380,7 @@ class WeatherApp {
             if (!this.useDemoData) {
                 console.log('API调用失败，切换到演示数据模式');
                 this.useDemoData = true;
-                this.showError('无法连接到天气服务，已切换到演示模式');
+                this.showWarning('无法连接到天气服务，已切换到演示模式');
                 await this.loadCityWeather(city); // 重新加载演示数据
             } else {
                 this.showError('获取天气数据失败，请稍后重试');
@@ -348,8 +536,20 @@ class WeatherApp {
 
     async loadForecast(city) {
         try {
+            const cacheKey = this.generateCacheKey(city, 'forecast');
             let forecastData;
 
+            // 检查缓存
+            const cachedData = this.getCache(cacheKey, 'forecast');
+            if (cachedData) {
+                console.log('使用缓存的预报数据');
+                forecastData = cachedData;
+                this.displayForecast(forecastData);
+                this.showInfo('预报数据来自缓存');
+                return;
+            }
+
+            // 缓存未命中，获取新数据
             if (this.useDemoData) {
                 // 使用演示数据
                 forecastData = DemoData.getForecast();
@@ -363,6 +563,8 @@ class WeatherApp {
                 forecastData = await response.json();
             }
 
+            // 缓存数据
+            this.setCache(cacheKey, forecastData, 'forecast');
             this.displayForecast(forecastData);
         } catch (error) {
             console.error('获取预报数据失败:', error);
@@ -371,7 +573,7 @@ class WeatherApp {
             if (!this.useDemoData) {
                 console.log('API调用失败，切换到演示数据模式');
                 this.useDemoData = true;
-                this.showError('无法连接到天气服务，已切换到演示模式');
+                this.showWarning('无法连接到天气服务，已切换到演示模式');
                 await this.loadForecast(city); // 重新加载演示数据
             } else {
                 this.showError('获取天气预报失败');
@@ -569,8 +771,20 @@ class WeatherApp {
 
     async loadHourlyForecast(city) {
         try {
+            const cacheKey = this.generateCacheKey(city, 'forecast'); // 复用预报缓存
             let forecastData;
 
+            // 检查缓存
+            const cachedData = this.getCache(cacheKey, 'forecast');
+            if (cachedData) {
+                console.log('使用缓存的逐小时预报数据');
+                forecastData = cachedData;
+                this.displayHourlyForecast(forecastData.list.slice(0, 24));
+                this.showInfo('逐小时数据来自缓存');
+                return;
+            }
+
+            // 缓存未命中，获取新数据
             if (this.useDemoData) {
                 // 使用演示数据
                 forecastData = DemoData.getForecast();
@@ -584,6 +798,8 @@ class WeatherApp {
                 forecastData = await response.json();
             }
 
+            // 缓存数据
+            this.setCache(cacheKey, forecastData, 'forecast');
             this.displayHourlyForecast(forecastData.list.slice(0, 24));
         } catch (error) {
             console.error('获取逐小时预报失败:', error);
@@ -592,7 +808,7 @@ class WeatherApp {
             if (!this.useDemoData) {
                 console.log('API调用失败，切换到演示数据模式');
                 this.useDemoData = true;
-                this.showError('无法连接到天气服务，已切换到演示模式');
+                this.showWarning('无法连接到天气服务，已切换到演示模式');
                 await this.loadHourlyForecast(city); // 重新加载演示数据
             } else {
                 this.showError('获取逐小时预报失败');
@@ -601,8 +817,8 @@ class WeatherApp {
     }
 
     displayHourlyForecast(hourlyData) {
-        // 使用WeatherCharts类创建增强的图表
-        this.charts.createHourlyForecastChart('hourlyChart', hourlyData, this.currentTheme);
+        // 使用优化的图表渲染
+        this.charts.queueChartRender('hourlyChart', hourlyData, 'hourly', this.currentTheme);
     }
 
     addCityToList(city) {
@@ -793,17 +1009,87 @@ class WeatherApp {
         }
     }
 
-    showError(message) {
+    showError(message, type = 'error') {
         const errorAlert = document.getElementById('errorAlert');
         const errorMessage = document.getElementById('errorMessage');
+        const errorIcon = errorAlert.querySelector('.error-icon') || document.createElement('div');
+
+        // 设置错误图标和样式
+        if (type === 'warning') {
+            errorAlert.className = 'alert alert-warning alert-dismissible fade show';
+            errorIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+        } else if (type === 'info') {
+            errorAlert.className = 'alert alert-info alert-dismissible fade show';
+            errorIcon.innerHTML = '<i class="fas fa-info-circle"></i>';
+        } else {
+            errorAlert.className = 'alert alert-danger alert-dismissible fade show';
+            errorIcon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+        }
+
+        // 添加错误图标到消息前面
+        if (!errorAlert.querySelector('.error-icon')) {
+            errorIcon.className = 'error-icon me-2';
+            errorMessage.parentNode.insertBefore(errorIcon, errorMessage);
+        }
 
         errorMessage.textContent = message;
         errorAlert.style.display = 'block';
 
-        // 5秒后自动隐藏错误提示
+        // 自动隐藏不同类型的错误
+        const hideTime = type === 'info' ? 3000 : type === 'warning' ? 5000 : 7000;
         setTimeout(() => {
             errorAlert.style.display = 'none';
-        }, 5000);
+        }, hideTime);
+
+        // 添加关闭按钮功能
+        const closeBtn = errorAlert.querySelector('.btn-close');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                errorAlert.style.display = 'none';
+            };
+        }
+    }
+
+    showSuccess(message) {
+        this.showError(message, 'success');
+    }
+
+    showWarning(message) {
+        this.showError(message, 'warning');
+    }
+
+    showInfo(message) {
+        this.showError(message, 'info');
+    }
+
+    showContentLoading(contentId) {
+        const content = document.getElementById(contentId);
+        if (content) {
+            // 保存原始内容
+            if (!content.dataset.originalContent) {
+                content.dataset.originalContent = content.innerHTML;
+            }
+
+            // 显示加载状态
+            content.innerHTML = `
+                <div class="content-loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <div class="loading-text">正在加载数据...</div>
+                </div>
+            `;
+        }
+    }
+
+    hideContentLoading(contentId) {
+        const content = document.getElementById(contentId);
+        if (content && content.dataset.originalContent) {
+            // 恢复原始内容
+            setTimeout(() => {
+                content.innerHTML = content.dataset.originalContent;
+            }, 300);
+        }
     }
 }
 

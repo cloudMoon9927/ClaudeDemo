@@ -3,6 +3,9 @@
 class WeatherCharts {
     constructor() {
         this.charts = new Map();
+        this.renderQueue = [];
+        this.isRendering = false;
+        this.maxDataPoints = 24; // 限制数据点数量以提高性能
     }
 
     // 创建逐小时预报图表
@@ -14,11 +17,14 @@ class WeatherCharts {
             this.charts.get(canvasId).destroy();
         }
 
-        // 准备数据
-        const labels = this.prepareHourlyLabels(hourlyData);
-        const temperatureData = this.prepareTemperatureData(hourlyData);
-        const precipitationData = this.preparePrecipitationData(hourlyData);
-        const humidityData = this.prepareHumidityData(hourlyData);
+        // 性能优化：限制数据点数量
+        const optimizedData = this.optimizeDataPoints(hourlyData, 12);
+
+        // 准备数据（使用优化后的数据）
+        const labels = this.prepareHourlyLabels(optimizedData);
+        const temperatureData = this.prepareTemperatureData(optimizedData);
+        const precipitationData = this.preparePrecipitationData(optimizedData);
+        const humidityData = this.prepareHumidityData(optimizedData);
 
         const chart = new Chart(ctx, {
             type: 'line',
@@ -155,6 +161,8 @@ class WeatherCharts {
             }
         });
 
+        // 添加性能标记
+        chart.lastUsed = Date.now();
         this.charts.set(canvasId, chart);
         return chart;
     }
@@ -234,6 +242,8 @@ class WeatherCharts {
             }
         });
 
+        // 添加性能标记
+        chart.lastUsed = Date.now();
         this.charts.set(canvasId, chart);
         return chart;
     }
@@ -301,6 +311,8 @@ class WeatherCharts {
             }
         });
 
+        // 添加性能标记
+        chart.lastUsed = Date.now();
         this.charts.set(canvasId, chart);
         return chart;
     }
@@ -423,6 +435,76 @@ class WeatherCharts {
             return true;
         }
         return false;
+    }
+
+    // 性能优化：批量渲染图表
+    queueChartRender(canvasId, data, type = 'hourly', theme = 'light') {
+        this.renderQueue.push({ canvasId, data, type, theme });
+        this.processRenderQueue();
+    }
+
+    async processRenderQueue() {
+        if (this.isRendering || this.renderQueue.length === 0) {
+            return;
+        }
+
+        this.isRendering = true;
+
+        // 处理队列中的图表渲染
+        while (this.renderQueue.length > 0) {
+            const { canvasId, data, type, theme } = this.renderQueue.shift();
+
+            try {
+                switch (type) {
+                    case 'hourly':
+                        this.createHourlyForecastChart(canvasId, data, theme);
+                        break;
+                    case 'temperature':
+                        this.createTemperatureTrendChart(canvasId, data, theme);
+                        break;
+                    case 'precipitation':
+                        this.createPrecipitationChart(canvasId, data, theme);
+                        break;
+                }
+
+                // 添加小延迟以避免阻塞UI
+                await new Promise(resolve => setTimeout(resolve, 10));
+            } catch (error) {
+                console.error(`图表渲染失败 (${canvasId}):`, error);
+            }
+        }
+
+        this.isRendering = false;
+    }
+
+    // 优化数据点数量
+    optimizeDataPoints(data, maxPoints = this.maxDataPoints) {
+        if (data.length <= maxPoints) {
+            return data;
+        }
+
+        // 均匀采样数据点
+        const step = Math.ceil(data.length / maxPoints);
+        const optimized = [];
+        for (let i = 0; i < data.length; i += step) {
+            optimized.push(data[i]);
+        }
+
+        return optimized;
+    }
+
+    // 内存清理
+    cleanupCharts() {
+        const now = Date.now();
+        const maxAge = 10 * 60 * 1000; // 10分钟
+
+        for (const [canvasId, chart] of this.charts) {
+            // 如果图表超过最大年龄，销毁它
+            if (chart.lastUsed && now - chart.lastUsed > maxAge) {
+                chart.destroy();
+                this.charts.delete(canvasId);
+            }
+        }
     }
 }
 
