@@ -7,7 +7,24 @@
       "Bash(sleep 3 && curl -s http://localhost:3000 | head -5)",
       "Bash(netstat -ano | findstr :3000)",
       "Bash(taskkill //F //PID 21736)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(taskkill /f /im node.exe)",
+      "Bash(taskkill /PID 3716 /F)",
+      "Bash(npx kill-port:*)",
+      "Bash(cd \"D:\\\\Claude Project\\\\ClaudeDemo\\\\weather\" && npm start)",
+      "Bash(timeout 3 && echo \"Server should be starting...\")",
+      "Bash(curl -s http://localhost:3000/api/health | jq .)",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(node test-city-features.js)",
+      "Bash(dir test-city-features.js)",
+      "Bash(dir *.js | findstr test)",
+      "Bash(ls -la test*)",
+      "Bash(curl -s \"http://localhost:3000/public/js/demo-data.js\" | head -20)",
+      "Bash(curl -s \"http://localhost:3000/js/demo-data.js\" | head -20)",
+      "Bash(cd \"D:\\\\Claude Project\\\\ClaudeDemo\\\\weather\" && npx kill-port 3000 && npm start)",
+      "Bash(node -c public/js/main.js)",
+      "Bash(node --check public/js/main.js)",
+      "Bash(move index-fixed.html public\\\\index-fixed.html)"
     ]
   }
 }

@@ -1,0 +1,9 @@
+
+> weather-app@1.0.0 start
+> node server/server.js
+
+天气应用服务器正在运行...
+服务器地址: http://localhost:3000
+健康检查: http://localhost:3000/api/health
+警告: 请设置OPENWEATHER_API_KEY环境变量
+你可以从 https://openweathermap.org/api 获取免费的API密钥

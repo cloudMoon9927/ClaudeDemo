@@ -19,6 +19,14 @@ class WeatherApp {
             maxAge: 5 * 60 * 1000 // 5分钟缓存
         };
 
+        // 批量操作状态
+        this.batchMode = false;
+        this.selectedCities = new Set();
+
+        // 排序和分组状态
+        this.sortMode = 'none'; // none, name, country
+        this.groupByRegion = false;
+
         this.init();
     }
 
@@ -78,6 +86,39 @@ class WeatherApp {
         document.getElementById('addCityBtn').addEventListener('touchstart', (e) => {
             e.preventDefault();
             this.showAddCityModal();
+        });
+
+        // 批量操作按钮
+        document.getElementById('batchModeBtn').addEventListener('click', () => {
+            this.toggleBatchMode();
+        });
+
+        // 批量操作控制按钮
+        document.getElementById('selectAllBtn').addEventListener('click', () => {
+            this.selectAllCities();
+        });
+        document.getElementById('deselectAllBtn').addEventListener('click', () => {
+            this.deselectAllCities();
+        });
+        document.getElementById('batchDeleteBtn').addEventListener('click', () => {
+            this.batchDeleteCities();
+        });
+        document.getElementById('exportCitiesBtn').addEventListener('click', () => {
+            this.exportCities();
+        });
+        document.getElementById('importCitiesBtn').addEventListener('click', () => {
+            this.showImportDialog();
+        });
+
+        // 排序和分组按钮
+        document.getElementById('sortByNameBtn').addEventListener('click', () => {
+            this.sortCitiesByName();
+        });
+        document.getElementById('sortByCountryBtn').addEventListener('click', () => {
+            this.sortCitiesByCountry();
+        });
+        document.getElementById('groupByRegionBtn').addEventListener('click', () => {
+            this.toggleGroupByRegion();
         });
 
         // 城市搜索（优化移动端输入）
@@ -217,7 +258,15 @@ class WeatherApp {
         document.querySelectorAll('.nav-link').forEach(link => {
             link.classList.remove('active');
         });
-        document.getElementById(`${tabName}WeatherTab`).classList.add('active');
+
+        // 修正标签ID映射
+        const tabIdMap = {
+            'current': 'currentWeatherTab',
+            'forecast': 'forecastTab',
+            'hourly': 'hourlyTab'
+        };
+        const tabId = tabIdMap[tabName] || `${tabName}Tab`;
+        document.getElementById(tabId).classList.add('active');
 
         // 获取所有内容面板
         const contents = document.querySelectorAll('.weather-content');
@@ -889,6 +938,7 @@ class WeatherApp {
     showAddCityModal() {
         const modal = new bootstrap.Modal(document.getElementById('addCityModal'));
         modal.show();
+        this.renderPopularCities();
     }
 
     closeAddCityModal() {
@@ -1090,6 +1140,355 @@ class WeatherApp {
                 content.innerHTML = content.dataset.originalContent;
             }, 300);
         }
+    }
+
+    // ==================== 批量操作功能 ====================
+
+    toggleBatchMode() {
+        this.batchMode = !this.batchMode;
+        const batchControls = document.getElementById('batchControls');
+        const batchBtn = document.getElementById('batchModeBtn');
+
+        if (this.batchMode) {
+            batchControls.style.display = 'block';
+            batchBtn.classList.remove('btn-outline-primary');
+            batchBtn.classList.add('btn-primary');
+            this.selectedCities.clear();
+        } else {
+            batchControls.style.display = 'none';
+            batchBtn.classList.remove('btn-primary');
+            batchBtn.classList.add('btn-outline-primary');
+            this.selectedCities.clear();
+        }
+
+        this.renderCityList();
+    }
+
+    selectAllCities() {
+        this.savedCities.forEach((_, index) => {
+            this.selectedCities.add(index);
+        });
+        this.renderCityList();
+    }
+
+    deselectAllCities() {
+        this.selectedCities.clear();
+        this.renderCityList();
+    }
+
+    batchDeleteCities() {
+        if (this.selectedCities.size === 0) {
+            this.showWarning('请先选择要删除的城市');
+            return;
+        }
+
+        if (!confirm(`确定要删除选中的 ${this.selectedCities.size} 个城市吗？`)) {
+            return;
+        }
+
+        // 从后往前删除，避免索引变化问题
+        const sortedIndices = Array.from(this.selectedCities).sort((a, b) => b - a);
+        sortedIndices.forEach(index => {
+            this.savedCities.splice(index, 1);
+        });
+
+        localStorage.setItem('savedCities', JSON.stringify(this.savedCities));
+        this.selectedCities.clear();
+        this.renderCityList();
+        this.showSuccess(`已删除 ${sortedIndices.length} 个城市`);
+
+        // 如果删除的是当前城市，加载第一个城市
+        if (this.savedCities.length > 0 && !this.currentCity) {
+            this.loadCityWeather(this.savedCities[0]);
+        }
+    }
+
+    exportCities() {
+        if (this.savedCities.length === 0) {
+            this.showWarning('没有城市可以导出');
+            return;
+        }
+
+        const dataStr = JSON.stringify(this.savedCities, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `cities_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        this.showSuccess(`已导出 ${this.savedCities.length} 个城市`);
+    }
+
+    showImportDialog() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                this.importCities(file);
+            }
+        };
+        input.click();
+    }
+
+    async importCities(file) {
+        try {
+            const text = await file.text();
+            const cities = JSON.parse(text);
+
+            if (!Array.isArray(cities)) {
+                throw new Error('文件格式不正确');
+            }
+
+            let imported = 0;
+            let duplicates = 0;
+
+            cities.forEach(city => {
+                const exists = this.savedCities.some(c =>
+                    c.name === city.name && c.country === city.country
+                );
+
+                if (!exists) {
+                    this.savedCities.push(city);
+                    imported++;
+                } else {
+                    duplicates++;
+                }
+            });
+
+            localStorage.setItem('savedCities', JSON.stringify(this.savedCities));
+            this.renderCityList();
+
+            let message = `导入完成：成功导入 ${imported} 个城市`;
+            if (duplicates > 0) {
+                message += `，跳过 ${duplicates} 个重复城市`;
+            }
+
+            this.showSuccess(message);
+        } catch (error) {
+            this.showError('导入失败：文件格式不正确');
+        }
+    }
+
+    // ==================== 排序和分组功能 ====================
+
+    sortCitiesByName() {
+        this.savedCities.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+        this.sortMode = 'name';
+        localStorage.setItem('savedCities', JSON.stringify(this.savedCities));
+        this.renderCityList();
+        this.showInfo('已按名称排序');
+    }
+
+    sortCitiesByCountry() {
+        this.savedCities.sort((a, b) => {
+            const countryA = a.country || '';
+            const countryB = b.country || '';
+            return countryA.localeCompare(countryB);
+        });
+        this.sortMode = 'country';
+        localStorage.setItem('savedCities', JSON.stringify(this.savedCities));
+        this.renderCityList();
+        this.showInfo('已按国家排序');
+    }
+
+    toggleGroupByRegion() {
+        this.groupByRegion = !this.groupByRegion;
+        const groupBtn = document.getElementById('groupByRegionBtn');
+
+        if (this.groupByRegion) {
+            groupBtn.classList.remove('btn-outline-secondary');
+            groupBtn.classList.add('btn-secondary');
+        } else {
+            groupBtn.classList.remove('btn-secondary');
+            groupBtn.classList.add('btn-outline-secondary');
+        }
+
+        this.renderCityList();
+    }
+
+    getRegionName(countryCode) {
+        const regions = {
+            'CN': '中国',
+            'US': '美国',
+            'GB': '英国',
+            'JP': '日本',
+            'FR': '法国',
+            'AU': '澳大利亚',
+            'SG': '新加坡',
+            'KR': '韩国',
+            'TH': '泰国',
+            'AE': '阿联酋',
+            'RU': '俄罗斯',
+            'EG': '埃及',
+            'IN': '印度',
+            'CA': '加拿大',
+            'DE': '德国',
+            'IT': '意大利',
+            'ES': '西班牙'
+        };
+        return regions[countryCode] || countryCode;
+    }
+
+    renderPopularCities() {
+        const popularCitiesContainer = document.getElementById('popularCities');
+        if (!popularCitiesContainer) return;
+
+        const popularCities = [
+            { name: '北京', country: 'CN' },
+            { name: '上海', country: 'CN' },
+            { name: '纽约', country: 'US' },
+            { name: '伦敦', country: 'GB' },
+            { name: '东京', country: 'JP' },
+            { name: '巴黎', country: 'FR' },
+            { name: '悉尼', country: 'AU' },
+            { name: '新加坡', country: 'SG' }
+        ];
+
+        const citiesContainer = popularCitiesContainer.querySelector('.d-flex');
+        citiesContainer.innerHTML = '';
+
+        popularCities.forEach(cityInfo => {
+            const city = this.findCityInDemoData(cityInfo.name, cityInfo.country);
+            if (city) {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-primary popular-city-badge';
+                badge.textContent = city.name;
+                badge.style.cursor = 'pointer';
+                badge.addEventListener('click', () => {
+                    this.addCityToList(city);
+                    this.closeAddCityModal();
+                    this.loadCityWeather(city);
+                });
+
+                citiesContainer.appendChild(badge);
+            }
+        });
+    }
+
+    findCityInDemoData(name, country) {
+        return DemoData.cities.find(city =>
+            city.name === name && city.country === country
+        );
+    }
+
+    // 重写城市列表渲染方法以支持批量操作和分组
+    renderCityList() {
+        const cityList = document.getElementById('cityList');
+        cityList.innerHTML = '';
+
+        if (this.groupByRegion && this.savedCities.length > 0) {
+            // 按地区分组显示
+            const groupedCities = this.groupCitiesByRegion();
+            this.renderGroupedCities(cityList, groupedCities);
+        } else {
+            // 普通列表显示
+            this.renderNormalCityList(cityList);
+        }
+    }
+
+    groupCitiesByRegion() {
+        const grouped = {};
+
+        this.savedCities.forEach((city, index) => {
+            const region = this.getRegionName(city.country) || '其他';
+            if (!grouped[region]) {
+                grouped[region] = [];
+            }
+            grouped[region].push({ city, index });
+        });
+
+        return grouped;
+    }
+
+    renderGroupedCities(cityList, groupedCities) {
+        Object.entries(groupedCities).forEach(([region, cities]) => {
+            // 添加地区标题
+            const regionHeader = document.createElement('div');
+            regionHeader.className = 'region-header mb-2';
+            regionHeader.innerHTML = `
+                <h6 class="text-white mb-0 py-1 px-2" style="background: rgba(255,255,255,0.2); border-radius: 5px;">
+                    ${region} (${cities.length})
+                </h6>
+            `;
+            cityList.appendChild(regionHeader);
+
+            // 添加该地区的城市
+            cities.forEach(({ city, index }) => {
+                const cityItem = this.createCityItem(city, index);
+                cityList.appendChild(cityItem);
+            });
+
+            // 添加分隔线
+            const separator = document.createElement('hr');
+            separator.className = 'my-3';
+            separator.style.borderColor = 'rgba(255,255,255,0.3)';
+            cityList.appendChild(separator);
+        });
+    }
+
+    renderNormalCityList(cityList) {
+        this.savedCities.forEach((city, index) => {
+            const cityItem = this.createCityItem(city, index);
+            cityList.appendChild(cityItem);
+        });
+    }
+
+    createCityItem(city, index) {
+        const cityItem = document.createElement('button');
+        cityItem.className = 'city-item';
+
+        const isSelected = this.selectedCities.has(index);
+        const isActive = this.currentCity &&
+            this.currentCity.name === city.name &&
+            this.currentCity.country === city.country;
+
+        if (isActive) {
+            cityItem.classList.add('active');
+        }
+
+        if (this.batchMode) {
+            cityItem.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <input type="checkbox" class="city-checkbox me-2"
+                           data-index="${index}" ${isSelected ? 'checked' : ''}>
+                    <span class="flex-grow-1 text-start">${city.name}</span>
+                </div>
+            `;
+
+            // 批量模式下点击选择/取消选择
+            cityItem.addEventListener('click', (e) => {
+                e.preventDefault();
+                const checkbox = cityItem.querySelector('.city-checkbox');
+                checkbox.checked = !checkbox.checked;
+
+                if (checkbox.checked) {
+                    this.selectedCities.add(index);
+                } else {
+                    this.selectedCities.delete(index);
+                }
+            });
+        } else {
+            cityItem.innerHTML = `
+                <span>${city.name}</span>
+                <span class="remove-city" data-index="${index}">
+                    <i class="fas fa-times"></i>
+                </span>
+            `;
+
+            // 正常模式下点击加载天气
+            cityItem.addEventListener('click', () => {
+                this.loadCityWeather(city);
+            });
+        }
+
+        return cityItem;
     }
 }
 

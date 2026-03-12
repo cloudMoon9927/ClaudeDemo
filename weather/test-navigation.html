@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导航功能测试</title>
+    <script>
+        // 简单的导航测试
+        function testNavigation() {
+            console.log('🧪 开始导航功能测试...');
+
+            // 测试switchTab函数是否存在
+            if (typeof window.weatherApp !== 'undefined' && window.weatherApp.switchTab) {
+                console.log('✅ WeatherApp.switchTab 函数存在');
+
+                // 测试标签切换
+                try {
+                    window.weatherApp.switchTab('current');
+                    console.log('✅ 切换到当前天气标签成功');
+
+                    window.weatherApp.switchTab('forecast');
+                    console.log('✅ 切换到天气预报标签成功');
+
+                    window.weatherApp.switchTab('hourly');
+                    console.log('✅ 切换到逐小时预报标签成功');
+
+                    console.log('🎉 所有导航功能测试通过！');
+                    return true;
+                } catch (error) {
+                    console.error('❌ 导航切换失败:', error.message);
+                    return false;
+                }
+            } else {
+                console.error('❌ WeatherApp 对象或 switchTab 函数不存在');
+                return false;
+            }
+        }
+
+        // 等待页面加载完成后测试
+        window.addEventListener('load', function() {
+            setTimeout(testNavigation, 2000); // 等待2秒确保所有脚本加载完成
+        });
+    </script>
+</head>
+<body>
+    <h1>导航功能测试页面</h1>
+    <p>请打开浏览器控制台查看测试结果。</p>
+    <button onclick="testNavigation()">手动运行测试</button>
+</body>
+</html>

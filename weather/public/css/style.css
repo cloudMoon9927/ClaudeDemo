@@ -75,6 +75,86 @@ body.dark-theme .modal-content {
     opacity: 1;
 }
 
+/* 批量操作样式 */
+#batchControls {
+    margin-bottom: 15px;
+}
+
+#batchControls .btn-group {
+    margin-bottom: 8px;
+}
+
+#batchControls .btn {
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+.city-checkbox {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.city-item .d-flex {
+    width: 100%;
+}
+
+.city-item .flex-grow-1 {
+    flex-grow: 1;
+}
+
+/* 分组显示样式 */
+.region-header {
+    margin-top: 10px;
+}
+
+.region-header h6 {
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.city-item {
+    position: relative;
+}
+
+.city-item .remove-city {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* 排序按钮状态 */
+#sortControls .btn.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 热门城市推荐 */
+#popularCities {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 15px;
+}
+
+#popularCities h6 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.popular-city-badge {
+    font-size: 12px;
+    padding: 4px 8px;
+    margin: 2px;
+    transition: all 0.3s ease;
+}
+
+.popular-city-badge:hover {
+    transform: scale(1.05);
+    background-color: #0056b3 !important;
+}
+
 /* 主内容区样式 */
 .main-content {
     padding: 30px;
