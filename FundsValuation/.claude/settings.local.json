@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_ecc_github__get_file_contents",
+      "mcp__plugin_ecc_github__create_or_update_file",
+      "mcp__plugin_ecc_github__list_commits"
+    ]
+  }
+}
